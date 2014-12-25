@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Simple Bit POS</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1	">
+	<script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/qrcode.min.js"></script>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap-theme.min.css" rel="stylesheet">
+	<style type="text/css">
+		.form-inline label {
+			width:150px;
+			text-align:right;
+		}
+		.form-inline .row {
+			margin-bottom:20px;
+		}
+		.clear {
+			clear:both;
+		}
+		.pull-right{
+			margin:10px;
+		}
+		#lock {
+			cursor:pointer;
+		}
+    </style>
+ </head>
+<body>
+<div class="container" role="main" id="main">
+    <div class="panel panel-primary">
+        <div class="panel-heading">
+        <span class="" >Simple Bit POS</span>
+        <span class="pull-right" id="rate">Rate: <i style="font-style:normal;"></i></span>
+    </div>    
+    <div class="panel-body center-block">
+        <div class="form-inline">
+            <div class="row">
+                <div class="col-md-8">
+                    <label>Bitcoin Address:</label>
+                    <div class="form-group input-group col-md-9">
+                        <span id="lock" class="input-group-addon glyphicon glyphicon-lock btn-warning"></span>
+                        <input maxlength="35" type="text" class="form-control" name="address" id="address" value="" placeholder="Unlock and paste bitcoin address here" disabled="">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label>Currency:</label>
+                    <div class="form-group input-group">
+                        <span id="curicon" class="input-group-addon glyphicon glyphicon-cloud-download"></span>
+                        <select class="form-control" name="currency" id="currency"><option value="">Loading...</option></select>
+                    </div>
+                </div>
+            </div>
+        	<div class="row">
+            	<div class="col-md-12">
+                    <label>Amount:</label>
+                    <div class="form-group form-group input-group">
+                        <span id="amtlab" class="input-group-addon glyphicon glyphicon-cloud-download"></span>
+                        <input type="number" class="form-control input-lg" name="amount" id="amount" placeholder="0.00" autofocus onfocus="this.value='';" >
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div>
+        <div class="pull-right" id="qrcode"></div>
+			<ul id="utransactions">
+			</ul>     
+        <ul id="transactions">
+        </ul>
+        <div class="clear"></div>
+        <div id="reqDetails" class="pull-right"></div>
+    </div>
+    <div class="clear"></div>
+</div>
+<script type="text/javascript" >
+
+jQuery(function($){
+	// set persistent user settings
+	function set_cookie ( name, value, exp_y, exp_m, exp_d, path, domain, secure )
+	{
+	  var cookie_string = name + "=" + escape ( value );
+	
+	  if ( exp_y )
+	  {
+		var expires = new Date ( exp_y, exp_m, exp_d );
+		cookie_string += "; expires=" + expires.toGMTString();
+	  }
+	
+	  if ( path )
+			cookie_string += "; path=" + escape ( path );
+	
+	  if ( domain )
+			cookie_string += "; domain=" + escape ( domain );
+	  
+	  if ( secure )
+			cookie_string += "; secure";
+	  
+	  document.cookie = cookie_string;
+	}
+	
+	// recall persistent user settings
+	function get_cookie ( cookie_name )
+	{
+	  var results = document.cookie.match ( '(^|;) ?' + cookie_name + '=([^;]*)(;|$)' );
+	
+	  if ( results )
+		return ( unescape ( results[2] ) );
+	  else
+		return null;
+	}
+	
+	function addCommas(nStr)
+	{
+		nStr += '';
+		x = nStr.split('.');
+		x1 = x[0];
+		x2 = x.length > 1 ? '.' + x[1] : '';
+		var rgx = /(\d+)(\d{3})/;
+		while (rgx.test(x1)) {
+			x1 = x1.replace(rgx, '$1' + ',' + '$2');
+		}
+		x = x1 + x2;
+		if(x.substr(0,1) == '.'){
+			x = '0' + x;
+		}
+		return x;
+	}
+	
+	$('#address').val(get_cookie ("address"));
+	$("#address").on("keyup", function () {
+	   set_cookie( "address", $(this).val());
+	});
+	
+	// lock/unlock address and currency
+	$("#lock").on("click", function(){
+		$("#address").removeAttr("disabled");
+	});
+	$("#address").on("blur", function () {
+		$("#address").attr("disabled", "disabled");
+	});
+	
+	var rate = 0;
+	   
+	// Load price conversions
+	$.getJSON("https://api.bitcoinaverage.com/ticker/global/all", function(result) {
+		$('#currency').empty();
+		$('#curicon').removeClass('glyphicon-cloud-download').addClass('glyphicon-globe');
+		$.each(result, function(k,v) {
+			if(k.length == 3){
+				$('#currency').append('<option value="'+k+'">'+k+'</option');
+					$('#currency').val(get_cookie ("currency"));
+			}
+		});
+		
+		$('#currency').change(function(){
+			var c = $(this).val();
+			rate = parseFloat(result[c].last);
+			$('#amtlab').removeClass('glyphicon glyphicon-cloud-download').html(c);
+			$('#rate i').html(addCommas(rate.toFixed(2))+' '+c+' = 1BTC');
+			$('#amount').trigger('keyup');
+      	$("#currency").on("blur", function () {
+			set_cookie( "currency", $(this).val());
+	});			
+		}).trigger('change');
+
+		$('#amount').keyup(function(){
+			$('#reqDetails,#qrcode').empty();
+			var qrcode = new QRCode(document.getElementById("qrcode"), {
+				width : 230,
+				height :230
+			});
+			var amount = parseFloat($(this).val());
+			if(rate > 0 && !isNaN(rate) && amount > 0 && !isNaN(amount)){
+				var btcvalue = Math.round((amount / rate ) * 100000000) / 100000000;
+				
+				qrcode.makeCode("bitcoin:" + $('#address').val() + "?amount=" + btcvalue);
+				$('#reqDetails').html("bitcoin:" + $('#address').val() + "?amount=" + btcvalue);
+			}
+		});
+	});
+
+	// List unconfirmed transactions		
+	var utxAjax = false;
+	function utransactions(){
+		if(utxAjax && txAjax.readystate != 4){
+			utxAjax.abort();
+		}
+		$('#utransactions').empty().append('<li>Loading Incoming Transactions...</li>');
+		utxAjax = $.getJSON("http://btc.blockr.io/api/v1/address/unconfirmed/"+$('#address').val(),function(rec){
+			var u = 0;
+			$('#utransactions').empty();
+			$.each(rec.data.unconfirmed,function(i,tx){
+				if(u < 5){
+					$('#utransactions').append('<li><a href="http://btc.blockr.io/tx/info/'+tx.tx+'" target="_blank">'+tx.time_utc+': <span class="label label-'+(tx.amount > 0 ? 'success' : 'danger')+'">'+tx.amount.toFixed(8)+' BTC | ~'+ (tx.amount * rate).toFixed(2) + currency.value + '</span> <span class="badge"> 0 Confirmations</span></a></li>');
+					u++;
+				}
+			});
+			if(u == 0){
+				$('#utransactions').empty().append('<li>No Incoming Transactions</li>');
+			}
+		}).fail(function(){
+			$('#utransactions').empty().append('<li>No Incoming Transactions</li>');
+		});
+		setTimeout(function(){utransactions()},10000);
+	}	
+		utransactions();
+		
+// List confirmed transactions	
+	var txAjax = false;
+	function transactions(){
+		if(txAjax && txAjax.readystate != 4){
+			txAjax.abort();
+		}
+
+		$('#transactions').empty().append('<li>Loading Transaction History...</li>');
+		txAjax = $.getJSON("http://btc.blockr.io/api/v1/address/txs/"+$('#address').val(),function(rec){
+			var n = 0;
+			$('#transactions').empty();
+			$.each(rec.data.txs,function(i,tx){
+				if(n < 5){
+					$('#transactions').append('<li><a href="http://btc.blockr.io/tx/info/'+tx.tx+'" target="_blank">'+tx.time_utc+': <span class="label label-'+(tx.amount > 0 ? 'success' : 'danger')+'">'+tx.amount.toFixed(8)+' BTC | ~'+ (tx.amount * rate).toFixed(2) + currency.value + '</span> <span class="badge">'+tx.confirmations+' Confirmations</span></a></li>');
+					n++;
+				}
+			});
+			if(n == 0){
+				$('#transactions').empty().append('<li>No Transactions History Found</li>');
+			}
+		}).fail(function(){
+			$('#transactions').empty().append('<li>No Transactions History Found</li>');
+		});
+		setTimeout(function(){transactions()},30000);
+	} 
+	transactions();
+});
+</script>
+</body>
+</html>
