@@ -5,7 +5,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1	">
 	 <script type="text/javascript" src="js/jquery.min.js"></script>
+	 <script type="text/javascript" src="js/spin.min.js"></script>
     <script type="text/javascript" src="js/qrcode.min.js"></script>
+    <script type="text/javascript" src="js/pbkdf2.js"></script>
+    <script type="text/javascript" src="js/biginteger.js"></script>
+    <script type="text/javascript" src="js/scrypt.js"></script>
+    <script type="text/javascript" src="js/bitcoin.js"></script>
+    <link href="css/font-awesome.min.css" rel="stylesheet">
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/bootstrap-theme.min.css" rel="stylesheet">
 	<style type="text/css">
@@ -27,20 +33,23 @@
 		}
 		#transactions {
     font-size: 1.2em;
+    font-family: monospace;
     margin-bottom: 20px;
 		}
 		#utransactions {
     font-size: 1.4em;
+    font-family: monospace;
     margin-bottom: 20px;
 		}
 
     </style>
  </head>
 <body>
+          <div class="wait" ></div>
 <div class="container" role="main" id="main">
     <div class="panel panel-primary">
         <div class="panel-heading">
-        <span class="" >Simple Bit POS</span>
+        <span class="" >Simple <i style="color: orange; font-size: 1.3em" class="fa fa-btc"></i>it POS</span>
         <span class="pull-right" id="rate">Rate: <i style="font-style:normal;"></i></span>
     </div>    
     <div class="panel-body center-block">
@@ -49,9 +58,9 @@
                 <div class="col-md-8">
                     <label>Bitcoin Address:</label>
                     <div class="form-group input-group col-md-9">
-                        <span id="lock" class="input-group-addon glyphicon glyphicon-lock btn-warning"></span>
+                        <span id="lock" class="input-group-addon fa fa-lock btn-warning"></span>
                         <input maxlength="35" type="text" class="form-control" name="address" id="address" value="" placeholder="Unlock and paste bitcoin address here" disabled="">
-                         <span id="gen" class="input-group-addon btn btn-sm glyphicon glyphicon-cog" data-toggle="modal" data-target="#myModal" disabled=""></span>
+                         <span id="gen" class="input-group-addon btn btn-sm glyphicon glyphicon-cog" data-toggle="modal" data-target="#genModal" disabled=""></span>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -86,17 +95,18 @@
 </div>
 
 <!-- Address generation modal -->
-   <div id="myModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+   <div id="genModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="genModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
 
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-          <h4 class="modal-title" id="myModalLabel">Bitcoin Address Generator</h4>
+          <h4 class="modal-title" id="genModalLabel">Bitcoin Address Generator</h4>
         </div>
         <div class="modal-body">
           <h4>Scrypt Based Address Creation</h4>
           <p>Compatible with <a href="https://keybase.io/warp">Warp Wallet</a> and <a href="http://easy-btc.org">Easy-BTC</a></p>
+          <p style="color: red" >For increased security it is advised that you use an offline computer when generating bitcoin addresses.</p>
 			 <form class="form-horizonal col-md-12">
 			   <div class="form-group">
 				  <label>Passphrase</label>
@@ -104,8 +114,10 @@
       		  <input type="password" class="form-control" id="passphrase" placeholder="Enter (4 word or longer) passphrase here.">
       		  <div class="input-group-addon glyphicon glyphicon-eye-open"></div>
     			 </div>
-    			  <input type="number" name="quantity" class="form-control" min="4" max="12" value="4"></input>
+    			 <div class="form-inline" >
 	           <button type="button" name="random" class="btn btn-default">Generate random words</button>
+    			  <input type="number" name="quantity" class="form-control" min="4" max="12" value="4"></input>
+	           </div>
   				 </div>
 			   <div class="form-group">
     			 <label>Email</label>
@@ -116,13 +128,39 @@
 			 </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary">Generate address</button>
+          <button type="button" class="btn btn-default cancel" data-dismiss="modal">Cancel</button>
+          <button id="generate" type="button" class="btn btn-primary" data-toggle="modal" data-target="#resultModal" disabled>Generate address</button>
         </div>
+      </div><!-- /.genModal-content -->
+    </div><!-- /.genModal-dialog -->
+  </div><!-- /.genModal -->
 
-      </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
-  </div><!-- /.modal -->
+<!-- Generation result modal -->
+   <div id="resultModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="resultModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="resultModalLabel">Bitcoin Address</h4>
+        </div>
+        <div class="modal-body">
+          <h4>Your Bitcoin Address</h4>
+          <i id="genadd-label"></i>
+          <p id="genadd"></p>
+          <hr>
+          <h4>Your Bitcoin Private Key</h4>
+			 <button type="button" class="btn btn-default glyphicon glyphicon-eye-open" ></button>
+          <i id="genpkey-label"></i>
+          <p id="genpkey" ></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button id="save" type="button" class="btn btn-primary" data-dismiss="modal" >Use Address</button>
+        </div>
+      </div><!-- /.resultModal-content -->
+    </div><!-- /.resultModal-dialog -->
+  </div><!-- /.resultModal -->
 
 <script type="text/javascript" >
 jQuery(function($){
@@ -183,37 +221,183 @@ jQuery(function($){
 	});
 	
 	// lock/unlock address and currency
-	$("#lock").on("click", function(){
-		$("#address").removeAttr("disabled");
-		$("#gen").removeAttr("disabled");
-	});
-	$("#address").on("blur", function () {
-		$("#address").attr("disabled", "disabled");
-		$("#gen").attr("disabled", "disabled");
-	});
-		$("#gen").on("click", function () {
-		$("#address").attr("disabled", "disabled");
-		$("#gen").attr("disabled", "disabled");
-	});
+    function lock(){
+    $("#lock").toggleClass("fa-unlock");
+    	if ($("#lock").hasClass("fa-unlock")) {
+        $("#address").removeAttr("disabled");
+        $("#gen").removeAttr("disabled");
+   	};
+    	if (!$("#lock").hasClass("fa-unlock")) {
+        $("#address").attr("disabled", "disabled");
+        $("#gen").attr("disabled", "disabled");
+    	}
+    	};
+    $("#lock").on("click", lock);
+    $("#address").on("blur", lock);
+    $("#gen").on("click", lock);
+  
 	
-	// Reveal hidden inputs
+	// Reveal hidden fields
+	$("[id^=genpkey]").hide()
 	$(".glyphicon-eye-open").on("click", function() {
 		$(this).toggleClass("glyphicon-eye-close");
 		$(this).toggleClass("btn-danger");
-		var type = $(this).parent().find("input").attr("type");
-		if (type == "text")
-			{ $(this).parent().find("input").prop("type", "password");
+
+	if ($(".glyphicon-eye-open").hasClass("glyphicon-eye-close")){
+		$(this).parent().find("input").prop("type", "text");
+		$(this).parent().find("[id^=genpkey]").show();
+		};
+	if (!$(".glyphicon-eye-open").hasClass("glyphicon-eye-close")) {
+		$(this).parent().find("input").prop("type", "password");
+		$(this).parent().find("[id^=genpkey]").hide()
+		};
+});
+
+// Code regarding address generation
+	//Avoid generation using weak passphrases
+	$("#passphrase").keypress(function () {
+	if ($(this).val().length > 12){
+		$('#generate').removeAttr("disabled");
+	}	else {
+			$('#generate').attr("disabled", "disabled");	
+		}	
+	});
+	
+	// Generate random words from wordlist
+	 // Coming soon
+	
+
+	// Generate Bitcoin address - Adapted from easy-btc.org --- This is a mess and should be done properly
+			function scrypto(passphrase,salt) {
+			var scrypt = scrypt_module_factory(Math.pow(2,29));
+			var result = scrypt.to_hex(
+				scrypt.crypto_scrypt(
+					scrypt.encode_utf8(passphrase + String.fromCharCode(0x01)),
+					scrypt.encode_utf8(salt + String.fromCharCode(0x01)),
+					Math.pow(2, 18), 8, 1, 32
+				)
+			);
+			return result
+
+		};
+
+		function pbkdf2o(passphrase,salt) {
+
+			var res = sjcl.misc.pbkdf2(
+				passphrase + String.fromCharCode(0x02),
+				salt + String.fromCharCode(0x02), 
+				Math.pow(2, 16), 256
+			);
+
+			var stepsDone = 0;
+			var calcStep = function(input) {
+				var res = sjcl.misc.pbkdf2(
+					input,
+					Math.pow(2, 6), 256
+				);
+				if (stepsDone++ < 1024) {
+					//setTimeout(function() {
+						calcStep(res);
+					//});
+				}
 			}
-		else
-			{ $(this).parent().find("input").prop("type", "text");
+
+			return sjcl.codec.hex.fromBits(res);
+		};
+		
+			function warp(passphrase,salt) {
+			var hex1 = scrypto(passphrase,salt);
+			var hex2 = pbkdf2o(passphrase,salt);
+			var out = '';
+			for (var i = 0; i < 64; ++i) {
+				out += (parseInt(hex1[i], 16) ^ parseInt(hex2[i], 16)).toString(16);
 			}
+			key = new Bitcoin.ECKey(BigInteger.fromHex(out), false);
+			return [key.toWIF(),key.pub.getAddress().toString()];
+
+		};
+		
+			function validAddress(address) {
+
+			try{
+				Bitcoin.Address.fromBase58Check(address);
+				return true;
+			}
+			catch(err){
+				return false;
+			}
+
+		};
+		
+			function validPkey(data) {
+
+			try{
+				Bitcoin.ECKey.fromWIF(data);
+				return true;
+			}
+			catch(err){
+				return false;
+			}
+
+		};
+		
+			function deleteResults() {
+
+			$("[id^=qrcode]").text('');
+			$('#passphrase').val('');	
+			$('#email').val('');
+		};
+		
+					function generate(passphrase, salt) {
+			var salt = $('#email').val()
+			this.passphraseMemory = $('#passphrase').val()
+			this.saltMemory = $('#passphrase').val()
+
+			if (validPkey(this.passphraseMemory)) { return };
+
+
+
+			var qrcode1 = new QRCode(document.getElementById("genadd"), {
+				width : 160,
+				height :160
+				})
+			var qrcode2 = new QRCode(document.getElementById("genpkey"), {
+				width : 160,
+				height :160
+				})
+
+			var result = warp(
+				$('#passphrase').val(), 
+				$('#email').val()
+			);    
+			$('#generate').html("Generate address")	
+window.address = (result[1]);
+			qrcode1.makeCode(result[1]);
+			qrcode2.makeCode(result[0]);
+
+			$('#genadd-label').text('Public Bitcoin Address: '+result[1]);
+			$('#genpkey-label').text('Private key: '+result[0]);
+};
+		
+$('#generate').on('click', function() {
+			$('#generate').html("Calculating. Please wait...")
+			setTimeout(function () {
+			generate($('#passphrase').val(), $('#email').val())				
+			},100);
+		});
+
+$('#save').on('click', function () {
+	$('#address').val(window.address)
+	deleteResults()
+});
+
+// Clear fields when modal is dismissed ---This is hacked together because I couldn't make "hidden.bs.modal" work
+$('#genModal').find('.close, .cancel').on('click', function () {
+	deleteResults()
 	});
 
-
-	
-	var rate = 0;
-	   
 	// Load price conversions
+	var rate = 0;
 	$.getJSON("https://api.bitcoinaverage.com/ticker/global/all", function(result) {
 		$('#currency').empty();
 		$('#curicon').removeClass('glyphicon-cloud-download').addClass('glyphicon-globe');
@@ -235,8 +419,13 @@ jQuery(function($){
 	});			
 		}).trigger('change');
 
-		$('#amount').keyup(function(){
-			$('#reqDetails,#qrcode').empty();
+		$('#amount').keypress(function(){
+		$('#qrcode').hide()
+		});
+		
+		$('#amount').keypress(function(e){
+		if(e.which == 13) {
+				$('#reqDetails,#qrcode').empty();
 			var qrcode = new QRCode(document.getElementById("qrcode"), {
 				width : 230,
 				height :230
@@ -247,14 +436,17 @@ jQuery(function($){
 				
 				qrcode.makeCode("bitcoin:" + $('#address').val() + "?amount=" + btcvalue);
 				$('#reqDetails').html("bitcoin:" + $('#address').val() + "?amount=" + btcvalue);
+				$('#qrcode').show()
+				$('#amount').attr("placeholder", amount)
+				$('#amount').val('')
 			}
-		});
+		}});
 	});
 
-	// List unconfirmed transactions		
+	// List unconfirmed transactions --- This will become secondary to the perfered blockchain.info's websocks api		
 	var utxAjax = false;
 	function utransactions(){
-		if(utxAjax && txAjax.readystate != 4){
+		if(utxAjax && utxAjax.readystate != 4){
 			utxAjax.abort();
 		}
 		$('#utransactions').empty().append('<li>Loading Incoming Transactions...</li>');
@@ -262,8 +454,11 @@ jQuery(function($){
 			var u = 0;
 			$('#utransactions').empty();
 			$.each(rec.data.unconfirmed,function(i,tx){
+			var txlt = new Date(tx.time_utc)
+			var txdate = txlt.getHours() +':'+txlt.getMinutes()+' '+txlt.getDate()+'/'+txlt.getMonth()+'/'+txlt.getFullYear()
+
 				if(u < 5){
-					$('#utransactions').append('<li><a href="http://btc.blockr.io/tx/info/'+tx.tx+'" target="_blank">'+tx.time_utc+': <span class="label label-'+(tx.amount > 0 ? 'success' : 'danger')+'">'+tx.amount.toFixed(8)+' BTC | ~'+ (tx.amount * rate).toFixed(2) + currency.value + '</span> <span class="label label-danger"> 0 Confirmations</span></a></li>');
+					$('#utransactions').append('<li><a href="http://btc.blockr.io/tx/info/'+tx.tx+'" target="_blank">'+txdate+' <span class="label label-'+(tx.amount > 0 ? 'success' : 'danger')+'">'+tx.amount.toFixed(8)+' BTC | ~'+ (tx.amount * rate).toFixed(2) + currency.value + '</span> <span class="label label-danger"> 0 Confirmations</span></a></li>');
 					u++;
 				}
 			});
@@ -277,20 +472,21 @@ jQuery(function($){
 	}	
 		utransactions();
 		
-// List confirmed transactions	
+// List confirmed transactions --- This will become secondary to the perfered blockchain.info's websocks api
 	var txAjax = false;
 	function transactions(){
 		if(txAjax && txAjax.readystate != 4){
 			txAjax.abort();
 		}
-
 		$('#transactions').empty().append('<li>Loading Transaction History...</li>');
 		txAjax = $.getJSON("http://btc.blockr.io/api/v1/address/txs/"+$('#address').val(),function(rec){
 			var n = 0;
 			$('#transactions').empty();
 			$.each(rec.data.txs,function(i,tx){
+			var txlt = new Date(tx.time_utc)
+			var txdate = txlt.getHours() +':'+txlt.getMinutes()+' '+txlt.getDate()+'/'+txlt.getMonth()+'/'+txlt.getFullYear()
 				if(n < 5){
-					$('#transactions').append('<li><a href="http://btc.blockr.io/tx/info/'+tx.tx+'" target="_blank">'+tx.time_utc+': <span class="label label-'+(tx.amount > 0 ? 'success' : 'danger')+'">'+tx.amount.toFixed(8)+' BTC | ~'+ (tx.amount * rate).toFixed(2) + currency.value + '</span> <span class="label label-'+(tx.confirmations > 3 ? 'success' : 'warning')+'">'+tx.confirmations+' Confirmations</span></a></li>');
+					$('#transactions').append('<li><a href="http://btc.blockr.io/tx/info/'+tx.tx+'" target="_blank">'+ txdate +' <span class="label label-'+(tx.amount > 0 ? 'success' : 'danger')+'">'+tx.amount.toFixed(8)+' BTC | ~'+ (tx.amount * rate).toFixed(2) + currency.value + '</span> <span class="label label-'+(tx.confirmations > 3 ? 'success' : 'warning')+'">'+tx.confirmations+' Confirmations</span></a></li>');
 					n++;
 				}
 			});
