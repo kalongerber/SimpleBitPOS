@@ -67,7 +67,7 @@
                     <label>Currency:</label>
                     <div class="form-group input-group">
                         <span id="curicon" class="input-group-addon glyphicon glyphicon-cloud-download"></span>
-                        <select class="form-control" name="currency" id="currency"><option value="">Loading...</option></select>
+                        <select class="form-control" name="currency" id="currency"><option value="USD">Loading...</option></select>
                     </div>
                 </div>
             </div>
@@ -164,7 +164,40 @@
 
 <script type="text/javascript" >
 jQuery(function($){
-	// recall persistent address
+	// set persistent user settings --- Not working in Chrome but I'm not sure why
+	function set_cookie ( name, value, exp_y, exp_m, exp_d, path, domain, secure )
+	{
+	  var cookie_string = name + "=" + escape ( value );
+	
+	  if ( exp_y )
+	  {
+		var expires = new Date ( exp_y, exp_m, exp_d );
+		cookie_string += "; expires=" + expires.toGMTString();
+	  }
+	
+	  if ( path )
+			cookie_string += "; path=" + escape ( path );
+	
+	  if ( domain )
+			cookie_string += "; domain=" + escape ( domain );
+	  
+	  if ( secure )
+			cookie_string += "; secure";
+	  
+	  document.cookie = cookie_string;
+	}
+	
+	// recall persistent user settings
+	function get_cookie ( cookie_name )
+	{
+	  var results = document.cookie.match ( '(^|;) ?' + cookie_name + '=([^;]*)(;|$)' );
+	
+	  if ( results )
+		return ( unescape ( results[2] ) );
+	  else
+		return null;
+	}
+	
 	function addCommas(nStr)
 	{
 		nStr += '';
@@ -182,9 +215,12 @@ jQuery(function($){
 		return x;
 	}
 	
- 	document.getElementById("address").value = localStorage.getItem("address"); 
+	$('#address').val(get_cookie ("address"));
+	$("#address").on("blur", function () {
+	   set_cookie( "address", $(this).val());
+	});
 	
-	// lock/unlock address
+	// lock/unlock address and currency
     function lock(){
     $("#lock").toggleClass("fa-unlock");
     	if ($("#lock").hasClass("fa-unlock")) {
@@ -194,7 +230,6 @@ jQuery(function($){
     	if (!$("#lock").hasClass("fa-unlock")) {
         $("#address").attr("disabled", "disabled");
         $("#gen").attr("disabled", "disabled");
-        localStorage.setItem("address", $(this).val());
     	}
     	};
     $("#lock").on("click", lock);
@@ -216,7 +251,7 @@ jQuery(function($){
 		$(this).parent().find("input").prop("type", "password");
 		$(this).parent().find("[id^=genpkey]").hide()
 		};
-	});
+});
 
 // Code regarding address generation
 	//Avoid generation using weak passphrases
@@ -313,7 +348,7 @@ jQuery(function($){
 			$('#email').val('');
 		};
 		
-		function generate(passphrase, salt) {
+					function generate(passphrase, salt) {
 			var salt = $('#email').val()
 			this.passphraseMemory = $('#passphrase').val()
 			this.saltMemory = $('#passphrase').val()
@@ -336,30 +371,30 @@ jQuery(function($){
 				$('#email').val()
 			);    
 			$('#generate').html("Generate address")	
-			window.address = (result[1]);
+window.address = (result[1]);
 			qrcode1.makeCode(result[1]);
 			qrcode2.makeCode(result[0]);
 
 			$('#genadd-label').text('Public Bitcoin Address: '+result[1]);
 			$('#genpkey-label').text('Private key: '+result[0]);
-		};
+};
 		
-		$('#generate').on('click', function() {
+$('#generate').on('click', function() {
 			$('#generate').html("Calculating. Please wait...")
 			setTimeout(function () {
 			generate($('#passphrase').val(), $('#email').val())				
 			},100);
 		});
 
-		$('#save').on('click', function () {
-			$('#address').val(window.address)
-		   localStorage.setItem("address", $('#address').val());
-			deleteResults()
-		});
+$('#save').on('click', function () {
+	$('#address').val(window.address)
+   set_cookie( "address", $('#address').val());
+	deleteResults()
+});
 
-	// Clear fields when modal is dismissed ---This is hacked together because I couldn't make "hidden.bs.modal" work
-	$('#genModal').find('.close, .cancel').on('click', function () {
-		deleteResults()
+// Clear fields when modal is dismissed ---This is hacked together because I couldn't make "hidden.bs.modal" work
+$('#genModal').find('.close, .cancel').on('click', function () {
+	deleteResults()
 	});
 
 	// Load price conversions
@@ -370,9 +405,9 @@ jQuery(function($){
 		$.each(result, function(k,v) {
 			if(k.length == 3){
 				$('#currency').append('<option value="'+k+'">'+k+'</option');
- 				document.getElementById("currency").value = localStorage.getItem("currency"); 
+					$('#currency').val(get_cookie ("currency"));
 			}
-	});
+		});
 		
 		$('#currency').change(function(){
 			var c = $(this).val();
@@ -381,7 +416,7 @@ jQuery(function($){
 			$('#rate i').html(addCommas(rate.toFixed(2))+' '+c+' = 1BTC');
 			$('#amount').trigger('keyup');
       	$("#currency").on("blur", function () {
-         localStorage.setItem("currency", $(this).val());
+			set_cookie( "currency", $(this).val());
 	});			
 		}).trigger('change');
 
