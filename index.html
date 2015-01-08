@@ -77,6 +77,7 @@
                     <div class="form-group form-group input-group">
                         <span id="amtlab" class="input-group-addon glyphicon glyphicon-cloud-download"></span>
                         <input type="number" class="form-control input-lg" name="amount" id="amount" placeholder="0.00" autofocus onfocus="this.value='';" >
+								<span id="payreq" class="input-group-addon glyphicon glyphicon-qrcode btn-success"></span>
                     </div>
                 </div>
             </div>
@@ -165,23 +166,6 @@
 <script type="text/javascript" >
 jQuery(function($){
 	// recall persistent address
-	function addCommas(nStr)
-	{
-		nStr += '';
-		x = nStr.split('.');
-		x1 = x[0];
-		x2 = x.length > 1 ? '.' + x[1] : '';
-		var rgx = /(\d+)(\d{3})/;
-		while (rgx.test(x1)) {
-			x1 = x1.replace(rgx, '$1' + ',' + '$2');
-		}
-		x = x1 + x2;
-		if(x.substr(0,1) == '.'){
-			x = '0' + x;
-		}
-		return x;
-	}
-	
  	document.getElementById("address").value = localStorage.getItem("address"); 
 	
 	// lock/unlock address
@@ -373,8 +357,25 @@ jQuery(function($){
  				document.getElementById("currency").value = localStorage.getItem("currency"); 
 			}
 	});
+
+	function addCommas(nStr)
+	{
+		nStr += '';
+		x = nStr.split('.');
+		x1 = x[0];
+		x2 = x.length > 1 ? '.' + x[1] : '';
+		var rgx = /(\d+)(\d{3})/;
+		while (rgx.test(x1)) {
+			x1 = x1.replace(rgx, '$1' + ',' + '$2');
+		}
+		x = x1 + x2;
+		if(x.substr(0,1) == '.'){
+			x = '0' + x;
+		}
+		return x;
+	}
 		
-		$('#currency').change(function(){
+		 $('#currency').change(function(){
 			var c = $(this).val();
 			rate = parseFloat(result[c].last);
 			$('#amtlab').removeClass('glyphicon glyphicon-cloud-download').html(c);
@@ -384,19 +385,20 @@ jQuery(function($){
          localStorage.setItem("currency", $(this).val());
 	});			
 		}).trigger('change');
-
-		$('#amount').keypress(function(){
-		$('#qrcode').hide()
-		});
+	});
 		
-		$('#amount').keypress(function(e){
-		if(e.which == 13) {
-				$('#reqDetails,#qrcode').empty();
+	// Clear previous payment request
+		$('#amount').keypress(function(){
+		$('#reqDetails,#qrcode').empty();
+		});
+
+	// Generate payment request
+	function payreq() {
 			var qrcode = new QRCode(document.getElementById("qrcode"), {
 				width : 230,
 				height :230
 			});
-			var amount = parseFloat($(this).val());
+			var amount = parseFloat($('#amount').val());
 			if(rate > 0 && !isNaN(rate) && amount > 0 && !isNaN(amount)){
 				var btcvalue = Math.round((amount / rate ) * 100000000) / 100000000;
 				
@@ -406,8 +408,19 @@ jQuery(function($){
 				$('#amount').attr("placeholder", amount)
 				$('#amount').val('')
 			}
-		}});
-	});
+
+		};
+		
+		$('#payreq').on('click', function(e){
+		payreq()
+		});
+
+		$('#amount').keypress(function(e){
+		if(e.which == 13) {
+		payreq()
+		}
+		});
+
 
 	// List unconfirmed transactions --- This will become secondary to the perfered blockchain.info's websocks api		
 	var utxAjax = false;
@@ -416,7 +429,7 @@ jQuery(function($){
 			utxAjax.abort();
 		}
 		$('#utransactions').empty().append('<li>Loading Incoming Transactions...</li>');
-		utxAjax = $.getJSON("http://btc.blockr.io/api/v1/address/unconfirmed/"+$('#address').val(),function(rec){
+		utxAjax = $.getJSON("https://btc.blockr.io/api/v1/address/unconfirmed/"+$('#address').val(),function(rec){
 			var u = 0;
 			$('#utransactions').empty();
 			$.each(rec.data.unconfirmed,function(i,tx){
@@ -445,7 +458,7 @@ jQuery(function($){
 			txAjax.abort();
 		}
 		$('#transactions').empty().append('<li>Loading Transaction History...</li>');
-		txAjax = $.getJSON("http://btc.blockr.io/api/v1/address/txs/"+$('#address').val(),function(rec){
+		txAjax = $.getJSON("https://btc.blockr.io/api/v1/address/txs/"+$('#address').val(),function(rec){
 			var n = 0;
 			$('#transactions').empty();
 			$.each(rec.data.txs,function(i,tx){
