@@ -11,6 +11,7 @@
     <script type="text/javascript" src="js/biginteger.js"></script>
     <script type="text/javascript" src="js/scrypt.js"></script>
     <script type="text/javascript" src="js/bitcoin.js"></script>
+    <script type="text/javascript" src="js/wordlist.js"></script>
     <link href="css/font-awesome.min.css" rel="stylesheet">
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/bootstrap-theme.min.css" rel="stylesheet">
@@ -32,16 +33,24 @@
 			cursor:pointer;
 		}
 		#transactions {
-    font-size: 1.2em;
-    font-family: monospace;
-    margin-bottom: 20px;
+		   font-size: 1.2em;
+		   font-family: monospace;
+   		margin-bottom: 20px;
 		}
 		#utransactions {
-    font-size: 1.4em;
-    font-family: monospace;
-    margin-bottom: 20px;
+			font-size: 1.4em;
+		   font-family: monospace;
+		   margin-bottom: 20px;
 		}
-
+		footer {
+			text-align: center;
+			width:100%;
+			height:1.5em;
+			position:absolute;
+			bottom:0;
+			left:0;
+			background:LightGray;
+		}
     </style>
  </head>
 <body>
@@ -59,8 +68,8 @@
                     <label>Bitcoin Address:</label>
                     <div class="form-group input-group col-md-9">
                         <span id="lock" class="input-group-addon fa fa-lock btn-warning"></span>
-                        <input maxlength="35" type="text" class="form-control" name="address" id="address" value="" placeholder="Unlock and paste bitcoin address here" disabled="">
-                         <span id="gen" class="input-group-addon btn btn-sm glyphicon glyphicon-cog" data-toggle="modal" data-target="#genModal" disabled=""></span>
+                        <input  autocomplete="on" maxlength="35" type="text" class="form-control" name="address" id="address" value="" placeholder="Unlock and paste bitcoin address here" disabled="">
+                         <span id="gen" class="input-group-addon btn btn-sm glyphicon glyphicon-cog" data-toggle="modal" data-target="#genModal" disabled="" title="Generate Address"></span>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -94,19 +103,42 @@
     </div>
     <div class="clear"></div>
 </div>
-
+  <footer>Conversion rates supplied by <a href="http://bitcoinaverage.com" target="_blank">BitcoinAverage.com</a>
+   : Transaction details supplied by <a href="http://blockr.io" target="_blank">Blockr.io</a>
+	: Make a <a  data-toggle="modal" data-target="#donationModal" >donation</a> to Simple <i style="color: orange; font-size: 1.3em" class="fa fa-btc"></i>it POS  
+   </footer>
+   
+   <!-- Donation modal -->
+   <div id="donationModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="Donation" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h3>Thank you for your donation</h3>
+        </div>
+        <div class="modal-body">
+          <h4 >16tHmvBTitLxsq7JFCeLVdr8MvJuJ8kCCo</h4>
+			 <div id="donationqrcode" ></div>
+        </div>
+        <div class="modal-footer">
+        			 <span class="pull-left" >Simple <i style="color: orange; font-size: 1.3em" class="fa fa-btc"></i>it POS developer - <a href="https://onename.io/kalongerber" target="black">Kalon Gerber</a></span>
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div><!-- /.donationModal-content -->
+    </div><!-- /.donationModal-dialog -->
+  </div><!-- /.donationModal -->
+  
 <!-- Address generation modal -->
    <div id="genModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="genModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
-
         <div class="modal-header">
           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-          <h4 class="modal-title" id="genModalLabel">Bitcoin Address Generator</h4>
+          <h4 class="modal-title" id="genModalLabel">Scrypt Based Address Generator</h4>
+          <i class="small">Compatible with <a href="https://keybase.io/warp">Warp Wallet</a> and <a href="http://easy-btc.org">Easy-BTC</a></i>
         </div>
         <div class="modal-body">
-          <h4>Scrypt Based Address Creation</h4>
-          <p>Compatible with <a href="https://keybase.io/warp">Warp Wallet</a> and <a href="http://easy-btc.org">Easy-BTC</a></p>
+			 <p> This dialog will help you create a very secure "brainwallet". Enter an <b>original</b> phrase or random words (<b>Not a password</b>) along with your email as an added security measure.</p>
           <p style="color: red" >For increased security it is advised that you use an offline computer when generating bitcoin addresses.</p>
 			 <form class="form-horizonal col-md-12">
 			   <div class="form-group">
@@ -116,7 +148,7 @@
       		  <div class="input-group-addon glyphicon glyphicon-eye-open"></div>
     			 </div>
     			 <div class="form-inline" >
-	           <button type="button" name="random" class="btn btn-default">Generate random words</button>
+	           <button id="random" type="button" name="random" class="btn btn-default">Generate random words</button>
     			  <input type="number" name="quantity" class="form-control" min="4" max="12" value="4"></input>
 	           </div>
   				 </div>
@@ -131,6 +163,8 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-default cancel" data-dismiss="modal">Cancel</button>
           <button id="generate" type="button" class="btn btn-primary" data-toggle="modal" data-target="#resultModal" disabled>Generate address</button>
+          <br>
+          <i style="font-size: .8em,">The user has sole responsibility maintaining access to funds.<i style="color: red">Check details carefully.</i></i>
         </div>
       </div><!-- /.genModal-content -->
     </div><!-- /.genModal-dialog -->
@@ -151,7 +185,9 @@
           <p id="genadd"></p>
           <hr>
           <h4>Your Bitcoin Private Key</h4>
+          <p>This may be imported into any bitcoin client to make funds spendible.</p>
 			 <button type="button" class="btn btn-default glyphicon glyphicon-eye-open" ></button>
+          <strong style="color: red">Warning: This should not be shared.</strong><br>
           <i id="genpkey-label"></i>
           <p id="genpkey" ></p>
         </div>
@@ -162,7 +198,6 @@
       </div><!-- /.resultModal-content -->
     </div><!-- /.resultModal-dialog -->
   </div><!-- /.resultModal -->
-
 <script type="text/javascript" >
 jQuery(function($){
 	// recall persistent address
@@ -212,8 +247,18 @@ jQuery(function($){
 		}	
 	});
 	
-	// Generate random words from wordlist
-	 // Coming soon
+	// Generate random words from wordlist -- not working yet
+	function random() {
+
+				$('passphrase').val(
+					WordList.random($('select[name=quantity]', this.$el).val())
+				);
+
+		};
+
+	$('#random').on('click', function () {
+		random()
+	})
 	
 
 	// Generate Bitcoin address - Adapted from easy-btc.org --- This is a mess and should be done properly
@@ -347,17 +392,6 @@ jQuery(function($){
 	});
 
 	// Load price conversions
-	var rate = 0;
-	$.getJSON("https://api.bitcoinaverage.com/ticker/global/all", function(result) {
-		$('#currency').empty();
-		$('#curicon').removeClass('glyphicon-cloud-download').addClass('glyphicon-globe');
-		$.each(result, function(k,v) {
-			if(k.length == 3){
-				$('#currency').append('<option value="'+k+'">'+k+'</option');
- 				document.getElementById("currency").value = localStorage.getItem("currency"); 
-			}
-	});
-
 	function addCommas(nStr)
 	{
 		nStr += '';
@@ -373,9 +407,21 @@ jQuery(function($){
 			x = '0' + x;
 		}
 		return x;
-	}
-		
-		 $('#currency').change(function(){
+	}	
+
+	var rate = 0;	
+	function loadrates() {
+	$.getJSON("https://api.bitcoinaverage.com/ticker/global/all", function(result) {
+		$('#currency').empty();
+		$('#curicon').removeClass('glyphicon-cloud-download').addClass('glyphicon-globe');
+		$.each(result, function(k,v) {
+			if(k.length == 3){
+				$('#currency').append('<option value="'+k+'">'+k+'</option');
+ 				document.getElementById("currency").value = localStorage.getItem("currency"); 
+			}
+	});
+	
+		$('#currency').change(function(){
 			var c = $(this).val();
 			rate = parseFloat(result[c].last);
 			$('#amtlab').removeClass('glyphicon glyphicon-cloud-download').html(c);
@@ -383,9 +429,13 @@ jQuery(function($){
 			$('#amount').trigger('keyup');
       	$("#currency").on("blur", function () {
          localStorage.setItem("currency", $(this).val());
-	});			
-		}).trigger('change');
+			});			
+		});
+		$('#currency').trigger('change');
 	});
+	};
+	loadrates();
+	setInterval(loadrates, 300000) // Update rates every 5 minutes
 		
 	// Clear previous payment request
 		$('#amount').keypress(function(){
@@ -451,7 +501,7 @@ jQuery(function($){
 	}	
 		utransactions();
 		
-// List confirmed transactions --- This will become secondary to the perfered blockchain.info's websocks api
+// List confirmed transactions -- There are some issues with refresh
 	var txAjax = false;
 	function transactions(){
 		if(txAjax && txAjax.readystate != 4){
@@ -478,6 +528,13 @@ jQuery(function($){
 		setTimeout(function(){transactions()},10000);
 	} 
 	transactions();
+	
+		var donationqrcode = new QRCode(document.getElementById("donationqrcode"), {
+		width : 160,
+		height :160
+		})
+	donationqrcode.makeCode("bitcoin:16tHmvBTitLxsq7JFCeLVdr8MvJuJ8kCCo");
+				
 });
 </script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
